@@ -1,113 +1,202 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements,
-  CardElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
-import { handleCreatePayment } from "@/fetchers";
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-);
-
-function CheckoutForm({ onClose }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-
-    setLoading(true);
-    try {
-      const amount = 1000;
-      const data = await handleCreatePayment(amount);
-
-      if (!data?.clientSecret)
-        throw new Error(data?.error || "No client secret");
-
-      const card = elements.getElement(CardElement);
-      const result = await stripe.confirmCardPayment(data.clientSecret, {
-        payment_method: { card },
-      });
-
-      if (result.error) {
-        alert("Payment failed: " + result.error.message);
-      } else if (result.paymentIntent?.status === "succeeded") {
-        alert("✅ Payment successful (test mode)!");
-        onClose();
-      } else {
-        alert("Payment status: " + result.paymentIntent?.status);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error: " + (err.message || err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="bg-card w-full max-w-md rounded-2xl shadow-lg border border-border p-6 relative">
-      <button
-        onClick={onClose}
-        className="absolute right-4 top-4 text-muted hover:text-foreground cursor-pointer"
-        disabled={loading}
-      >
-        <X size={20} />
-      </button>
-
-      <h2 className="text-2xl font-semibold mb-4">Subscribe</h2>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label className="text-sm font-medium">Card details</label>
-        <div className="border border-border p-3 rounded-md">
-          <CardElement
-            options={{
-              hidePostalCode: true,
-              style: {
-                base: {
-                  color: "#fff",
-                  fontSize: "16px",
-                  fontFamily: "inherit",
-                  "::placeholder": {
-                    color: "#9ca3af",
-                  },
-                },
-                invalid: {
-                  color: "#ef4444",
-                },
-              },
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-6 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-60 hover:bg-blue-700 transition font-medium cursor-pointer"
-        >
-          {loading ? "Processing..." : "Pay $10 (test)"}
-        </button>
-      </form>
-    </div>
-  );
-}
+import { X, Check } from "lucide-react";
+import { WhopCheckoutEmbed } from "@whop/checkout/react";
 
 export default function CheckoutModal({ isOpen, onClose }) {
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const [selectedProductId, setSelectedProductId] = useState(null);
+
   if (!isOpen) return null;
 
+  const tiers = [
+    {
+      name: "Basic",
+      monthlyPrice: 19,
+      yearlyPrice: 190,
+      productIds: {
+        monthly: "prod_S5XiqPjAIJFTh", // Replace with your real Whop product ID
+        yearly: "prod_basic_yearly_xxxxx", // Replace with your real Whop product ID
+      },
+      features: [
+        "Access to up to 500k deposits",
+        "Monthly performance charts",
+        "Yearly performance charts",
+        "Basic asset tracking",
+        "Email support",
+      ],
+      isPopular: false,
+    },
+    {
+      name: "Premium",
+      monthlyPrice: 49,
+      yearlyPrice: 490,
+      productIds: {
+        monthly: "prod_premium_monthly_xxxxx", // Replace with your real Whop product ID
+        yearly: "prod_premium_yearly_xxxxx", // Replace with your real Whop product ID
+      },
+      features: [
+        "Unlimited deposits",
+        "Unlimited performance charts",
+        "Unlimited asset purchases",
+        "Advanced analytics dashboard",
+        "Real-time data updates",
+        "Priority support",
+        "Export data functionality",
+      ],
+      isPopular: true,
+    },
+  ];
+
+  const PricingTier = ({ name, price, features, isPopular, onSelect }) => (
+    <div
+      className={`relative flex flex-col p-6 rounded-xl border-2 transition-all ${
+        isPopular
+          ? "border-blue-500 bg-blue-500/5 scale-105"
+          : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+      }`}
+    >
+      {isPopular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-blue-500 text-white text-xs font-semibold rounded-full">
+          MOST POPULAR
+        </div>
+      )}
+
+      <div className="mb-4">
+        <h3 className="text-xl font-bold text-white mb-2">{name}</h3>
+        <div className="flex items-baseline gap-1">
+          <span className="text-3xl font-bold text-white">${price}</span>
+          <span className="text-gray-400">
+            /{billingCycle === "monthly" ? "mo" : "yr"}
+          </span>
+        </div>
+      </div>
+
+      <ul className="space-y-3 mb-6 flex-grow">
+        {features.map((feature, idx) => (
+          <li key={idx} className="flex items-start gap-2 text-sm">
+            <Check size={16} className="text-green-400 mt-0.5 flex-shrink-0" />
+            <span className="text-gray-300">{feature}</span>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        onClick={onSelect}
+        className={`w-full py-3 rounded-lg font-semibold transition cursor-pointer ${
+          isPopular
+            ? "bg-blue-500 hover:bg-blue-600 text-white"
+            : "bg-gray-700 hover:bg-gray-600 text-white"
+        }`}
+      >
+        Get Started
+      </button>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Elements stripe={stripePromise}>
-        <CheckoutForm onClose={onClose} />
-      </Elements>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-gray-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-gray-800 p-8 relative my-8">
+        {selectedProductId ? (
+          <>
+            <button
+              onClick={() => setSelectedProductId(null)}
+              className="absolute left-6 top-6 text-gray-400 hover:text-white transition cursor-pointer text-sm"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={onClose}
+              className="absolute right-6 top-6 text-gray-400 hover:text-white transition cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="mt-12">
+              <WhopCheckoutEmbed
+                planId={selectedProductId}
+                theme="dark"
+                skipRedirect={true}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onClose}
+              className="absolute right-6 top-6 text-gray-400 hover:text-white transition cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-white mb-2">
+                Choose Your Plan
+              </h2>
+              <p className="text-gray-400">
+                Select the perfect plan for your needs
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 mb-8">
+              <span
+                className={`text-sm font-medium ${
+                  billingCycle === "monthly" ? "text-white" : "text-gray-500"
+                }`}
+              >
+                Monthly
+              </span>
+              <button
+                onClick={() =>
+                  setBillingCycle(
+                    billingCycle === "monthly" ? "yearly" : "monthly"
+                  )
+                }
+                className={`relative w-14 h-7 rounded-full transition cursor-pointer ${
+                  billingCycle === "yearly" ? "bg-blue-500" : "bg-gray-700"
+                }`}
+              >
+                <div
+                  className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                    billingCycle === "yearly" ? "translate-x-7" : ""
+                  }`}
+                />
+              </button>
+              <span
+                className={`text-sm font-medium ${
+                  billingCycle === "yearly" ? "text-white" : "text-gray-500"
+                }`}
+              >
+                Yearly
+              </span>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {tiers.map((tier) => (
+                <PricingTier
+                  key={tier.name}
+                  name={tier.name}
+                  price={
+                    billingCycle === "monthly"
+                      ? tier.monthlyPrice
+                      : tier.yearlyPrice
+                  }
+                  features={tier.features}
+                  isPopular={tier.isPopular}
+                  onSelect={() =>
+                    setSelectedProductId(tier.productIds[billingCycle])
+                  }
+                />
+              ))}
+            </div>
+
+            <p className="text-center text-gray-500 text-xs mt-6">
+              Secure checkout powered by Whop
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }
