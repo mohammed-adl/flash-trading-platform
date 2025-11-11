@@ -47,5 +47,9 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
   await authService.saveRefreshToken(payload.id, newRefreshToken);
 
-  success(res, { user, token: newAccessToken, refreshToken: newRefreshToken });
+  success(res, {
+    user,
+    token: newAccessToken,
+    refreshToken: newRefreshToken,
+  });
 });

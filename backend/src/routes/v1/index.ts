@@ -6,7 +6,7 @@ import notificationRouter from "./notification.router.js";
 import PortfolioRouter from "./portfolio.router.js";
 import authRouter from "./auth.router.js";
 import AIRouter from "./AI.router.js";
-import stripeRouter from "./stripe.routes.js";
+import whopRouter from "./whop.router.js";
 
 export function setupRoutes(app) {
   app.use("/api/v1/auth", authRouter);
@@ -17,5 +17,5 @@ export function setupRoutes(app) {
   app.use("/api/v1/notifications", notificationRouter);
   app.use("/api/v1/portfolio", PortfolioRouter);
   app.use("/api/v1/AI", AIRouter);
-  app.use("/api/v1/stripe", stripeRouter);
+  app.use("/api/v1/whop", whopRouter);
 }

@@ -24,8 +24,34 @@ model User {
   refreshTokens     RefreshToken[]
   trades            Trade[]
   transactions      Transaction[]
+  subscriptions     Subscription[]
 
   @@map("users")
+}
+
+model Subscription {
+  id                 String            @id @default(uuid())
+  userId             String
+  whopUserId         String
+  membershipId       String
+  whopSubscriptionId String
+  type               SUBSCRIPTION_TYPE
+  amount             Decimal
+  startDate          DateTime          @default(now())
+  endDate            DateTime?
+  canceled           Boolean           @default(false)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  user               User              @relation(fields: [userId], references: [id])
+
+  @@unique([userId, membershipId])
+  @@map("subscriptions")
+}
+
+enum SUBSCRIPTION_TYPE {
+  MONTHLY
+  YEARLY
+  ONE_TIME
 }
 
 model Holding {
